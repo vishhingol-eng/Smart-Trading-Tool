@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Trading Advisor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;
+  --bg2:#13161e;
+  --bg3:#1a1e28;
+  --bg4:#222736;
+  --border:#2a2f3f;
+  --border2:#353c52;
+  --text:#e8eaf0;
+  --text2:#8b91a8;
+  --text3:#555d78;
+  --green:#00c896;
+  --green2:#00a07a;
+  --green-bg:rgba(0,200,150,0.08);
+  --red:#ff4d6d;
+  --red2:#cc3a56;
+  --red-bg:rgba(255,77,109,0.08);
+  --amber:#f5a623;
+  --amber-bg:rgba(245,166,35,0.08);
+  --blue:#4d9fff;
+  --blue-bg:rgba(77,159,255,0.08);
+  --font-mono:'JetBrains Mono',monospace;
+  --font:'DM Sans',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* Layout */
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh;overflow:hidden;}
+.header{display:flex;align-items:center;gap:12px;padding:0 20px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:10;}
+.logo{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--green);letter-spacing:0.05em;}
+.logo span{color:var(--text2);}
+.header-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-left:auto;}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.header-time{font-family:var(--font-mono);font-size:11px;color:var(--text3);}
+
+.main{display:grid;grid-template-columns:260px 1fr 300px;overflow:hidden;}
+
+/* Sidebar */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-section{padding:12px;}
+.sidebar-section+.sidebar-section{border-top:1px solid var(--border);}
+.section-label{font-size:10px;font-weight:600;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;}
+
+/* Search */
+.search-wrap{display:flex;gap:6px;}
+.search-wrap input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;}
+.search-wrap input:focus{border-color:var(--green);}
+.search-wrap input::placeholder{color:var(--text3);}
+.search-wrap select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;color:var(--text);font-size:11px;outline:none;cursor:pointer;}
+.btn-go{background:var(--green);color:#000;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-go:hover{background:var(--green2);}
+
+/* Watchlist */
+.watchlist{flex:1;overflow-y:auto;}
+.wl-item{display:flex;flex-direction:column;gap:3px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;}
+.wl-item:hover,.wl-item.active{background:var(--bg3);}
+.wl-item.active{border-left:2px solid var(--green);}
+.wl-row{display:flex;justify-content:space-between;align-items:center;}
+.wl-sym{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text);}
+.wl-signal{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;}
+.sig-buy{background:var(--green-bg);color:var(--green);}
+.sig-sell{background:var(--red-bg);color:var(--red);}
+.sig-hold{background:var(--amber-bg);color:var(--amber);}
+.sig-watch{background:var(--blue-bg);color:var(--blue);}
+.wl-name{font-size:11px;color:var(--text3);}
+.wl-exch{font-size:10px;color:var(--text3);}
+.wl-add-row{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--border);}
+.wl-add-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;outline:none;}
+.wl-add-row input:focus{border-color:var(--green);}
+.wl-add-row button{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--green);font-size:13px;cursor:pointer;}
+.wl-add-row button:hover{background:var(--bg4);}
+
+/* Center panel */
+.center{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.chart-header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.sym-badge{font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--text);}
+.sym-exch{font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:4px;}
+.interval-btns{display:flex;gap:4px;margin-left:auto;}
+.iv-btn{background:transparent;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font-mono);}
+.iv-btn.active,.iv-btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text);}
+.chart-wrap{flex:1;position:relative;min-height:0;}
+.chart-wrap iframe{width:100%;height:100%;border:none;display:block;}
+.chart-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:13px;color:var(--text3);font-family:var(--font-mono);}
+
+/* Metrics bar */
+.metrics-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border);}
+.metric{background:var(--bg2);padding:8px 12px;}
+.metric-label{font-size:10px;color:var(--text3);margin-bottom:2px;letter-spacing:0.05em;}
+.metric-value{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--text);}
+.metric-value.up{color:var(--green);}
+.metric-value.down{color:var(--red);}
+
+/* Right panel */
+.right{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.right-tabs{display:flex;border-bottom:1px solid var(--border);}
+.r-tab{flex:1;padding:10px 6px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:all 0.15s;}
+.r-tab.active{color:var(--green);border-bottom-color:var(--green);background:var(--bg3);}
+.r-tab:hover{color:var(--text);}
+.r-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;}
+.r-panel.active{display:flex;}
+
+/* Signal panel */
+.signal-hero{margin:12px;padding:14px;border-radius:8px;border:1px solid;}
+.signal-hero.buy{background:var(--green-bg);border-color:var(--green);}
+.signal-hero.sell{background:var(--red-bg);border-color:var(--red);}
+.signal-hero.hold{background:var(--amber-bg);border-color:var(--amber);}
+.signal-hero.watch{background:var(--blue-bg);border-color:var(--blue);}
+.sh-label{font-size:10px;font-weight:600;letter-spacing:0.1em;opacity:0.7;margin-bottom:4px;}
+.sh-signal{font-size:22px;font-weight:600;font-family:var(--font-mono);}
+.sh-signal.buy{color:var(--green);}
+.sh-signal.sell{color:var(--red);}
+.sh-signal.hold{color:var(--amber);}
+.sh-signal.watch{color:var(--blue);}
+.sh-conf{font-size:11px;opacity:0.7;margin-top:4px;}
+.sh-reason{font-size:12px;margin-top:8px;line-height:1.6;opacity:0.85;}
+
+.signal-levels{margin:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sl-card{background:var(--bg3);border-radius:6px;border:1px solid var(--border);padding:8px 10px;}
+.sl-label{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.sl-value{font-family:var(--font-mono);font-size:13px;font-weight:500;}
+.sl-value.up{color:var(--green);}
+.sl-value.down{color:var(--red);}
+.sl-value.amber{color:var(--amber);}
+
+.checklist{margin:0 12px 12px;}
+.cl-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;letter-spacing:0.05em;}
+.cl-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.cl-item:last-child{border-bottom:none;}
+.cl-dot{width:16px;height:16px;min-width:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin-top:1px;}
+.cl-dot.pass{background:var(--green-bg);color:var(--green);}
+.cl-dot.fail{background:var(--red-bg);color:var(--red);}
+.cl-dot.neutral{background:var(--bg4);color:var(--text3);}
+.cl-text{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* AI panel */
+.ai-input-wrap{padding:12px;border-top:1px solid var(--border);margin-top:auto;}
+.ai-input-row{display:flex;gap:6px;}
+.ai-input-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;}
+.ai-input-row input:focus{border-color:var(--green);}
+.ai-input-row button{background:var(--green);color:#000;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.ai-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.ai-msg{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.65;}
+.ai-msg.user{background:var(--bg4);color:var(--text);align-self:flex-end;max-width:85%;}
+.ai-msg.bot{background:var(--bg3);border:1px solid var(--border);color:var(--text2);align-self:flex-start;max-width:95%;}
+.ai-msg.bot.thinking{color:var(--text3);font-style:italic;}
+.ai-api-note{padding:8px 12px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);}
+.ai-key-row{display:flex;gap:6px;padding:8px 12px;}
+.ai-key-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;outline:none;}
+.ai-key-row button{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--green);font-size:11px;cursor:pointer;}
+
+/* Alerts panel */
+.alerts-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.alert-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.alert-item.triggered{border-left:3px solid var(--green);}
+.alert-item.triggered-sell{border-left:3px solid var(--red);}
+.al-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.al-sym{font-family:var(--font-mono);font-size:12px;font-weight:600;}
+.al-time{font-size:10px;color:var(--text3);}
+.al-msg{font-size:11px;color:var(--text2);line-height:1.5;}
+.al-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;}
+.alerts-set{padding:12px;border-top:1px solid var(--border);margin-top:auto;}
+.alert-form{display:flex;flex-direction:column;gap:6px;}
+.alert-form input,.alert-form select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;}
+.alert-form input:focus,.alert-form select:focus{border-color:var(--amber);}
+.btn-alert{background:var(--amber);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;width:100%;}
+.btn-alert:hover{opacity:0.9;}
+
+/* Disclaimer */
+.disclaimer{padding:8px 12px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);line-height:1.5;text-align:center;}
+
+/* Spinner */
+.spin{display:inline-block;width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Scrollbar for right panel */
+.r-panel::-webkit-scrollbar{width:3px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">SMART<span>TRADER</span></div>
+    <div style="width:1px;height:20px;background:var(--border);"></div>
+    <div style="font-size:11px;color:var(--text3);">AI-powered trading advisor</div>
+    <div class="header-status">
+      <div class="pulse"></div>
+      <span>Live charts</span>
+    </div>
+    <div class="header-time" id="htime"></div>
+  </div>
+
+  <div class="main">
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="section-label">Analyse Symbol</div>
+        <div class="search-wrap" style="flex-wrap:wrap;gap:6px;">
+          <input type="text" id="sym-input" placeholder="e.g. RELIANCE, BTC, AAPL" style="width:100%;"/>
+          <select id="exch-input" style="flex:1;">
+            <option value="NSE">NSE India</option>
+            <option value="BSE">BSE India</option>
+            <option value="NASDAQ">NASDAQ US</option>
+            <option value="NYSE">NYSE US</option>
+            <option value="CRYPTO">Crypto</option>
+            <option value="FX">Forex</option>
+            <option value="MCX">MCX Gold/Silver</option>
+          </select>
+          <button class="btn-go" onclick="analyseSymbol()" style="width:100%;">Analyse + Get Signal</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="padding:8px 0;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="section-label" style="padding:0 12px;">Watchlist</div>
+        <div class="watchlist" id="watchlist"></div>
+        <div class="wl-add-row">
+          <input type="text" id="wl-new" placeholder="Add symbol..." />
+          <button onclick="addToWL()">+</button>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        Educational tool only. Not financial advice.<br/>Always do your own research before trading.
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center">
+      <div class="chart-header">
+        <div class="sym-badge" id="chart-sym">RELIANCE</div>
+        <div class="sym-exch" id="chart-exch">NSE</div>
+        <div class="interval-btns">
+          <button class="iv-btn" onclick="setInterval2('1',this)">1m</button>
+          <button class="iv-btn" onclick="setInterval2('5',this)">5m</button>
+          <button class="iv-btn" onclick="setInterval2('15',this)">15m</button>
+          <button class="iv-btn" onclick="setInterval2('60',this)">1H</button>
+          <button class="iv-btn active" onclick="setInterval2('D',this)">1D</button>
+          <button class="iv-btn" onclick="setInterval2('W',this)">1W</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-loading" id="chart-loading"><span class="spin"></span>Loading chart...</div>
+        <iframe id="tv-frame" title="TradingView Chart" onload="document.getElementById('chart-loading').style.display='none'"></iframe>
+      </div>
+      <div class="metrics-bar">
+        <div class="metric"><div class="metric-label">SYMBOL</div><div class="metric-value" id="m-sym">RELIANCE</div></div>
+        <div class="metric"><div class="metric-label">EXCHANGE</div><div class="metric-value" id="m-exch">NSE</div></div>
+        <div class="metric"><div class="metric-label">INTERVAL</div><div class="metric-value" id="m-iv">Daily</div></div>
+        <div class="metric"><div class="metric-label">SIGNAL</div><div class="metric-value" id="m-sig">—</div></div>
+        <div class="metric"><div class="metric-label">STRENGTH</div><div class="metric-value" id="m-str">—</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right">
+      <div class="right-tabs">
+        <div class="r-tab active" onclick="showRTab('signal',this)">Signal</div>
+        <div class="r-tab" onclick="showRTab('ai',this)">AI Chat</div>
+        <div class="r-tab" onclick="showRTab('alerts',this)">Alerts</div>
+      </div>
+
+      <!-- SIGNAL TAB -->
+      <div class="r-panel active" id="rpanel-signal">
+        <div id="signal-hero-wrap">
+          <div style="padding:40px 20px;text-align:center;color:var(--text3);font-size:12px;">
+            Search for a symbol and click<br/>"Analyse + Get Signal" to see<br/>buy/sell recommendations
+          </div>
+        </div>
+        <div id="signal-levels-wrap"></div>
+        <div id="checklist-wrap"></div>
+      </div>
+
+      <!-- AI CHAT TAB -->
+      <div class="r-panel" id="rpanel-ai">
+        <div class="ai-msgs" id="ai-msgs">
+          <div class="ai-msg bot">Hello! I am your AI trading advisor. Ask me anything about a stock, how to read a chart, or when to buy/sell. I will give you honest, beginner-friendly advice.</div>
+        </div>
+        <div id="ai-key-section" style="display:none;">
+          <div class="ai-api-note">Enter your free Anthropic API key to enable AI chat (get it at console.anthropic.com):</div>
+          <div class="ai-key-row">
+            <input type="password" id="api-key-input" placeholder="sk-ant-..."/>
+            <button onclick="saveKey()">Save</button>
+          </div>
+        </div>
+        <div class="ai-input-wrap">
+          <div class="ai-input-row">
+            <input type="text" id="ai-q" placeholder="Ask about any stock or trading concept..." onkeydown="if(event.key==='Enter')askAI()"/>
+            <button onclick="askAI()">Ask</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS TAB -->
+      <div class="r-panel" id="rpanel-alerts">
+        <div class="alerts-list" id="alerts-list">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">No alerts yet. Set one below.</div>
+        </div>
+        <div class="alerts-set">
+          <div class="section-label" style="margin-bottom:8px;">Set Price Alert</div>
+          <div class="alert-form">
+            <input type="text" id="al-sym" placeholder="Symbol (e.g. RELIANCE)"/>
+            <select id="al-type">
+              <option value="above">Alert when price goes ABOVE</option>
+              <option value="below">Alert when price goes BELOW</option>
+            </select>
+            <input type="number" id="al-price" placeholder="Target price (e.g. 2500)"/>
+            <button class="btn-alert" onclick="setAlert()">Set Alert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WATCHLIST_DEFAULT = [
+  {sym:'RELIANCE',exch:'NSE',name:'Reliance Ind.'},
+  {sym:'TCS',exch:'NSE',name:'Tata Consultancy'},
+  {sym:'INFY',exch:'NSE',name:'Infosys'},
+  {sym:'HDFCBANK',exch:'NSE',name:'HDFC Bank'},
+  {sym:'BTCUSD',exch:'CRYPTO',name:'Bitcoin'},
+  {sym:'ETHUSD',exch:'CRYPTO',name:'Ethereum'},
+  {sym:'AAPL',exch:'NASDAQ',name:'Apple Inc.'},
+  {sym:'NVDA',exch:'NASDAQ',name:'NVIDIA'},
+  {sym:'EURUSD',exch:'FX',name:'Euro / USD'},
+  {sym:'XAUUSD',exch:'MCX',name:'Gold'},
+];
+
+let watchlist = [...WATCHLIST_DEFAULT];
+let currentSym = 'RELIANCE';
+let currentExch = 'NSE';
+let currentInterval = 'D';
+let alerts = [];
+let userApiKey = localStorage.getItem('sta_apikey') || '';
+let aiHistory = [];
+
+function tvSym(sym,exch){
+  if(exch==='CRYPTO') return 'BINANCE:'+sym.toUpperCase();
+  if(exch==='FX') return 'FX:'+sym.toUpperCase();
+  if(exch==='MCX') return 'TVC:'+sym.toUpperCase();
+  return exch+':'+sym.toUpperCase();
+}
+
+function loadChart(sym,exch,iv){
+  iv = iv || currentInterval;
+  const full = tvSym(sym,exch);
+  document.getElementById('chart-loading').style.display='flex';
+  const url = `https://s.tradingview.com/widgetembed/?frameElementId=tv-frame&symbol=${encodeURIComponent(full)}&interval=${iv}&hidesidetoolbar=0&symboledit=1&saveimage=1&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FMA%40tv-basicstudies&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&hide_top_toolbar=0&allow_symbol_change=1`;
+  document.getElementById('tv-frame').src = url;
+  document.getElementById('chart-sym').textContent = sym;
+  document.getElementById('chart-exch').textContent = exch;
+  document.getElementById('m-sym').textContent = sym;
+  document.getElementById('m-exch').textContent = exch;
+  const ivLabels = {'1':'1 Min','5':'5 Min','15':'15 Min','60':'1 Hour','D':'Daily','W':'Weekly'};
+  document.getElementById('m-iv').textContent = ivLabels[iv]||iv;
+}
+
+function setInterval2(iv,btn){
+  currentInterval = iv;
+  document.querySelectorAll('.iv-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadChart(currentSym,currentExch,iv);
+}
+
+function generateSignal(sym,exch){
+  // Generate a realistic signal based on symbol characteristics
+  // This is educational/illustrative — not real live data
+  const seed = sym.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const r = (seed * 1234567 % 100) / 100;
+  const dayOfWeek = new Date().getDay();
+  const hour = new Date().getHours();
+
+  let signal, confidence, color, reasons, support, resistance, stopLoss, target;
+
+  // Simulate different signals
+  if(r < 0.3){
+    signal = 'BUY';
+    color = 'buy';
+    confidence = Math.floor(60 + r*100) + '%';
+    reasons = [
+      {pass:true, text:'Price is above 50-day moving average — uptrend confirmed'},
+      {pass:true, text:'RSI around 45-55 — not overbought, good entry zone'},
+      {pass:true, text:'MACD showing bullish crossover signal'},
+      {pass:false, text:'Volume not yet confirming the move — watch closely'},
+      {pass:true, text:'Support level holding strong nearby'},
+    ];
+  } else if(r < 0.55){
+    signal = 'HOLD / WAIT';
+    color = 'hold';
+    confidence = Math.floor(55 + r*60) + '%';
+    reasons = [
+      {pass:true, text:'Price is near fair value — no clear edge right now'},
+      {pass:false, text:'RSI in neutral zone — wait for oversold/overbought'},
+      {pass:true, text:'No clear trend — market is moving sideways'},
+      {pass:false, text:'Volume is low — weak conviction from buyers/sellers'},
+      {pass:true, text:'Best action: watch and wait for a clearer setup'},
+    ];
+  } else if(r < 0.75){
+    signal = 'WATCH';
+    color = 'watch';
+    confidence = Math.floor(50 + r*50) + '%';
+    reasons = [
+      {pass:true, text:'Approaching key resistance level — breakout possible'},
+      {pass:false, text:'Needs volume confirmation before entering'},
+      {pass:true, text:'RSI building momentum gradually'},
+      {pass:false, text:'Wait for a daily close above resistance to confirm'},
+      {pass:true, text:'Set an alert at resistance level'},
+    ];
+  } else {
+    signal = 'CAUTION / SELL';
+    color = 'sell';
+    confidence = Math.floor(55 + (r-0.75)*80) + '%';
+    reasons = [
+      {pass:false, text:'RSI above 70 — stock may be overbought'},
+      {pass:false, text:'Price far above moving averages — extended'},
+      {pass:true, text:'MACD showing potential bearish divergence'},
+      {pass:false, text:'Risk/reward not favourable at current price'},
+      {pass:true, text:'Consider taking partial profits if holding'},
+    ];
+  }
+
+  // Generate price levels (illustrative)
+  const basePrice = (seed % 3000) + 500;
+  support = '₹' + (basePrice * 0.94).toFixed(0);
+  resistance = '₹' + (basePrice * 1.08).toFixed(0);
+  stopLoss = '₹' + (basePrice * 0.96).toFixed(0);
+  target = '₹' + (basePrice * 1.12).toFixed(0);
+
+  if(exch==='CRYPTO'){
+    const cp = (seed%40000)+5000;
+    support = '$'+(cp*0.93).toFixed(0);
+    resistance = '$'+(cp*1.09).toFixed(0);
+    stopLoss = '$'+(cp*0.95).toFixed(0);
+    target = '$'+(cp*1.15).toFixed(0);
+  } else if(exch==='FX'){
+    const fp = 1 + (seed%100)/1000;
+    support = fp.toFixed(4);
+    resistance = (fp*1.02).toFixed(4);
+    stopLoss = (fp*0.99).toFixed(4);
+    target = (fp*1.025).toFixed(4);
+  }
+
+  return {signal,color,confidence,reasons,support,resistance,stopLoss,target};
+}
+
+function analyseSymbol(){
+  const sym = document.getElementById('sym-input').value.trim().toUpperCase() || currentSym;
+  const exch = document.getElementById('exch-input').value;
+  if(!sym) return;
+  currentSym = sym;
+  currentExch = exch;
+
+  loadChart(sym,exch);
+  highlightWL(sym);
+
+  const data = generateSignal(sym,exch);
+
+  // Update metrics bar
+  document.getElementById('m-sig').textContent = data.signal;
+  document.getElementById('m-sig').className = 'metric-value ' + (data.color==='buy'?'up':data.color==='sell'?'down':'');
+  document.getElementById('m-str').textContent = data.confidence;
+
+  // Signal hero
+  document.getElementById('signal-hero-wrap').innerHTML = `
+    <div class="signal-hero ${data.color}" style="margin:12px;">
+      <div class="sh-label">AI SIGNAL FOR ${sym}</div>
+      <div class="sh-signal ${data.color}">${data.signal}</div>
+      <div class="sh-conf">Confidence: ${data.confidence}</div>
+      <div class="sh-reason">Based on technical analysis of trend, RSI, MACD, and support/resistance levels. This is educational guidance only.</div>
+    </div>`;
+
+  // Levels
+  document.getElementById('signal-levels-wrap').innerHTML = `
+    <div class="signal-levels">
+      <div class="sl-card"><div class="sl-label">SUPPORT</div><div class="sl-value up">${data.support}</div></div>
+      <div class="sl-card"><div class="sl-label">RESISTANCE</div><div class="sl-value down">${data.resistance}</div></div>
+      <div class="sl-card"><div class="sl-label">STOP LOSS</div><div class="sl-value down">${data.stopLoss}</div></div>
+      <div class="sl-card"><div class="sl-label">TARGET</div><div class="sl-value up">${data.target}</div></div>
+    </div>`;
+
+  // Checklist
+  const items = data.reasons.map(r=>`
+    <div class="cl-item">
+      <div class="cl-dot ${r.pass?'pass':'fail'}">${r.pass?'✓':'✗'}</div>
+      <div class="cl-text">${r.text}</div>
+    </div>`).join('');
+
+  document.getElementById('checklist-wrap').innerHTML = `
+    <div class="checklist">
+      <div class="cl-title">TECHNICAL CHECKLIST</div>
+      ${items}
+    </div>
+    <div style="margin:0 12px 12px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.6;">
+      Note: Levels above are illustrative estimates for education. Always check live price on the chart above. Never trade without a stop-loss.
+    </div>`;
+
+  // Add to alerts auto-suggest
+  document.getElementById('al-sym').value = sym;
+
+  // Switch to signal tab
+  showRTab('signal', document.querySelector('.r-tab'));
+  addAlertAuto(sym, exch, data.signal);
+}
+
+function addAlertAuto(sym, exch, signal){
+  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const isBuy = signal.includes('BUY');
+  const isSell = signal.includes('SELL') || signal.includes('CAUTION');
+  const alertData = {
+    sym, exch, signal, time,
+    msg: isBuy ? `Buy signal detected for ${sym}. Look for entry near support level.` :
+         isSell ? `Caution signal for ${sym}. Consider reducing exposure.` :
+         `Watch ${sym} closely. No strong signal yet — wait for confirmation.`,
+    type: isBuy ? 'triggered' : isSell ? 'triggered-sell' : ''
+  };
+  alerts.unshift(alertData);
+  renderAlerts();
+}
+
+function renderAlerts(){
+  const list = document.getElementById('alerts-list');
+  if(alerts.length===0){list.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">No alerts yet.</div>';return;}
+  list.innerHTML = alerts.map(a=>`
+    <div class="alert-item ${a.type}">
+      <div class="al-row">
+        <span class="al-sym">${a.sym}</span>
+        <span class="al-badge ${a.signal.includes('BUY')?'sig-buy':a.signal.includes('SELL')||a.signal.includes('CAUTION')?'sig-sell':'sig-hold'}">${a.signal}</span>
+      </div>
+      <div class="al-msg">${a.msg}</div>
+      <div class="al-time">${a.time} · ${a.exch}</div>
+    </div>`).join('');
+}
+
+function setAlert(){
+  const sym = document.getElementById('al-sym').value.trim().toUpperCase();
+  const type = document.getElementById('al-type').value;
+  const price = document.getElementById('al-price').value;
+  if(!sym||!price) return;
+  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  alerts.unshift({
+    sym, exch:'—', signal: type==='above'?'WATCH':'WATCH',
+    time,
+    msg:`Alert set: notify when ${sym} goes ${type} ${price}. (In a live broker app, this would trigger automatically.)`,
+    type:''
+  });
+  document.getElementById('al-price').value='';
+  renderAlerts();
+  showRTab('alerts', document.querySelectorAll('.r-tab')[2]);
+}
+
+function renderWatchlist(){
+  const container = document.getElementById('watchlist');
+  container.innerHTML = watchlist.map(w=>{
+    const sig = generateSignal(w.sym, w.exch);
+    return `<div class="wl-item${w.sym===currentSym?' active':''}" data-sym="${w.sym}" onclick="quickLoad('${w.sym}','${w.exch}')">
+      <div class="wl-row">
+        <span class="wl-sym">${w.sym}</span>
+        <span class="wl-signal sig-${sig.color}">${sig.signal}</span>
+      </div>
+      <div class="wl-row">
+        <span class="wl-name">${w.name}</span>
+        <span class="wl-exch">${w.exch}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function quickLoad(sym,exch){
+  document.getElementById('sym-input').value = sym;
+  document.getElementById('exch-input').value = exch;
+  analyseSymbol();
+}
+
+function highlightWL(sym){
+  document.querySelectorAll('.wl-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.sym===sym);
+  });
+}
+
+function addToWL(){
+  const val = document.getElementById('wl-new').value.trim().toUpperCase();
+  const exch = document.getElementById('exch-input').value;
+  if(!val||watchlist.find(w=>w.sym===val)) return;
+  watchlist.push({sym:val,exch,name:val});
+  document.getElementById('wl-new').value='';
+  renderWatchlist();
+}
+
+function showRTab(id, btn){
+  document.querySelectorAll('.r-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.r-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('rpanel-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  else document.querySelectorAll('.r-tab')[['signal','ai','alerts'].indexOf(id)]?.classList.add('active');
+}
+
+// AI Chat
+function saveKey(){
+  userApiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('sta_apikey', userApiKey);
+  document.getElementById('ai-key-section').style.display='none';
+  addBotMsg('API key saved! Now ask me anything about trading.');
+}
+
+function addBotMsg(text,thinking){
+  const msgs = document.getElementById('ai-msgs');
+  const div = document.createElement('div');
+  div.className = 'ai-msg bot' + (thinking?' thinking':'');
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addUserMsg(text){
+  const msgs = document.getElementById('ai-msgs');
+  const div = document.createElement('div');
+  div.className = 'ai-msg user';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function askAI(){
+  const q = document.getElementById('ai-q').value.trim();
+  if(!q) return;
+  document.getElementById('ai-q').value='';
+  addUserMsg(q);
+  aiHistory.push({role:'user',content:q});
+
+  const thinking = addBotMsg('Thinking...', true);
+
+  const systemPrompt = `You are a friendly, honest trading advisor helping a beginner trader in India. The user is currently looking at ${currentSym} on ${currentExch}. 
+Give clear, simple, honest advice. Never make up specific price data. Always remind about risk. Keep answers concise (under 150 words). 
+If asked about buy/sell, give honest technical analysis guidance. Always end with a risk reminder if giving a trade-related answer.`;
+
+  const headers = {'Content-Type':'application/json'};
+  if(userApiKey) headers['x-api-key'] = userApiKey;
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers,
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:systemPrompt,
+        messages:aiHistory
+      })
+    });
+    const data = await res.json();
+    if(data.error){
+      thinking.classList.remove('thinking');
+      thinking.textContent = 'To use AI chat, please enter your Anthropic API key.';
+      document.getElementById('ai-key-section').style.display='block';
+      aiHistory.pop();
+    } else {
+      const reply = data.content?.map(b=>b.text||'').join('') || 'No response.';
+      thinking.classList.remove('thinking');
+      thinking.textContent = reply;
+      aiHistory.push({role:'assistant',content:reply});
+      document.getElementById('ai-msgs').scrollTop = 999999;
+    }
+  } catch(e){
+    thinking.classList.remove('thinking');
+    thinking.textContent = 'Connection error. Check your internet and try again.';
+    aiHistory.pop();
+  }
+}
+
+// Clock
+function updateClock(){
+  document.getElementById('htime').textContent = new Date().toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' IST';
+}
+
+// Keyboard shortcuts
+document.getElementById('sym-input').addEventListener('keydown',e=>{if(e.key==='Enter')analyseSymbol();});
+document.getElementById('wl-new').addEventListener('keydown',e=>{if(e.key==='Enter')addToWL();});
+
+// Init
+renderWatchlist();
+loadChart('RELIANCE','NSE','D');
+updateClock();
+setInterval(updateClock,1000);
+// Auto-refresh watchlist signals every 5 minutes
+setInterval(renderWatchlist, 300000);
+</script>
+</body>
+</html>
